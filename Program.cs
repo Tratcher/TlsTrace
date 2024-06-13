@@ -32,5 +32,5 @@ for (int i = 0; i < 400; i++)
 {
     var response = await client.GetAsync("https://httpbin.org/headers");
     Console.WriteLine($"Request {i} completed: " + response.Version);
-    await Task.Delay(1000);
+    await Task.Delay(250);
 }
