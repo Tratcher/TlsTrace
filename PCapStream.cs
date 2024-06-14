@@ -15,10 +15,10 @@ using System.Threading.Tasks;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal
 {
-    internal class PcapStream : SslStream
+    internal class PcapStream : Stream
     {
-        // private readonly Stream _innerStream;
-        // internal Stream InnerStream => _innerStream;
+        private readonly Stream _innerStream;
+        internal Stream InnerStream => _innerStream;
 
         private readonly int localIP4;
         private readonly int remoteIP4;
@@ -259,10 +259,9 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal
         }
 
         internal unsafe PcapStream(NetCapture pcap, Stream innerStream, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint, int portOffset)
-            : base(innerStream, false)
         {
             _pcap = pcap;
-            // _innerStream = innerStream;
+            _innerStream = innerStream;
             _portOffset = portOffset;
 
             if (localEndPoint.AddressFamily == AddressFamily.InterNetworkV6 && !localEndPoint.Address.IsIPv4MappedToIPv6)
@@ -354,7 +353,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal
 
         public override int Read(Span<byte> buffer)
         {
-            int readLength = base.Read(buffer);
+            int readLength = InnerStream.Read(buffer);
             WriteTcpPacket(TcpFlags.Psh | TcpFlags.Ack, buffer.Slice(0, readLength), isResponse: true);
             return readLength;
         }
@@ -364,7 +363,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal
 
         public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            ValueTask<int> task = base.ReadAsync(buffer, cancellationToken);
+            ValueTask<int> task = InnerStream.ReadAsync(buffer, cancellationToken);
 
             if (!task.IsCompletedSuccessfully)
             {
@@ -390,7 +389,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal
         public override void Write(ReadOnlySpan<byte> buffer)
         {
             WriteTcpPacket(TcpFlags.Psh | TcpFlags.Ack, buffer);
-            base.Write(buffer);
+            InnerStream.Write(buffer);
         }
 
         public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
@@ -399,7 +398,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal
         public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
             WriteTcpPacket(TcpFlags.Psh | TcpFlags.Ack, buffer.Span);
-            return base.WriteAsync(buffer, cancellationToken);
+            return InnerStream.WriteAsync(buffer, cancellationToken);
         }
     }
 
